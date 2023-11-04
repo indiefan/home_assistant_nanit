@@ -2,69 +2,55 @@
 
 This is a fork of a no-longer-maintained project (https://gitlab.com/adam.stanek/nanit) with added support for Nanit's (now required) 2FA authentication.
 
+# Installation (Docker)
 
-Original readme below:
+## Pull the Docker Image
 
-# Nanit Stream Proxy
+While it is possible to build the image locally from the included Dockerfile, it is recommended to install and update by pulling the official image directly from Docker Hub. To pull the image manually without running the container, run:
 
-This is sleepless night induced pet project to restream Nanit Baby Monitor live stream for local viewing.
+`docker pull indiefan/nanit`
 
-## Features
+## Authentication
 
-- Restreaming of live feed to local RTMP server
-- Retrieving sensors data from cam (temperature and humidity) and publishing them over MQTT
-- Graceful authentication session handling
-- Works as a companion for your Home-assistant / Homebridge setup (see [guides](#setup-guides) below)
+Because Nanit requires 2FA authentication, before we can start we need to acquire a refresh token for your Nanit account, which can be done by running the included init-nanit.sh CLI tool, which will prompt you for required account information and the 2FA code which will be emailed during the process. The script will save this to a session.json file, where it will be updated automatically going forward. Note that the `/data` volume provided to the script command must be the same used when running the primary container image later.
 
-## TL;DR
+### Acquire the Refresh Token
+
+Run the bundled init-nanit.sh utility directly via the Docker command line to acquire the token (replace `/path/to/data` with the local path you'd like the container to use for storing session data):
+
+`docker run -it -v /path/to/data:/data --entrypoint=/app/scripts/init-nanit.sh indiefan/nanit`
+
+** Important Note regarding Security**
+The refresh token provides complete access to your Nanit account without requiring any additional account information, so be sure to protect your system from access by unauthorized parties, and proceed at your own risk.
+
+## Docker Run
+
+Now that the initial authentication has been done, and the refresh token has been generated, it's time to start the container:
 
 ```bash
-# Note: use your local IP, reachable from Cam (not 127.0.0.1)
+# Note: use your local IP, reachable from Cam (not 127.0.0.1 nor localhost)
 
-docker run --rm \
-  -e NANIT_EMAIL=your@email.tld \
-  -e NANIT_PASSWORD=XXXXXXXXXXXXX \
+docker run \
+  -d \
+  --name=nanit \
+  --restart unless-stopped \
   -e NANIT_RTMP_ADDR=xxx.xxx.xxx.xxx:1935 \
+  -e NANIT_LOG_LEVEL=trace \
   -p 1935:1935 \
-  registry.gitlab.com/adam.stanek/nanit:v0-7
+  indiefan/nanit:latest
 ```
 
-Open `rtmp://127.0.0.1:1935/local/[your_baby_uid]` in VLC. You will find your baby UID in the log of running application.
-### Setup guides
+If this is your initial run, you may want to omit the `-d` flag so you can observe the output to find your `baby_uid` (which will be needed later if you plan on connecting anything to the feed, like Home Assistant). After getting the baby id (which won't change) you can stop the container and restart it with the `-d` flag.
 
-- [Home assistant](./docs/home-assistant.md)
-- [Homebridge](./docs/homebridge.md)
-- [Sensors](./docs/sensors.md)
-- [Docker compose](./docs/docker-compose.md)
+## Home Assistant
 
-### Further usage
+Once the server is running and mirroring the feed, you can then setup an entity in Home Assistant. Open your `configuration.yaml` file and add the following:
 
-Application is ready to be used in Docker. You can use environment variables for configuration. For more info see [.env.sample](.env.sample).
-## Why?
-
-- I wanted to learn something new on paternity leave (first project in Go!)
-- Nanit iOS application is nice, but I was really disappointed that it cannot properly stream to TV through AirPlay. As anxious parents of our first child we wanted to have it playing in the background on TV when we are in the kitchen, etc. When AirPlaying it from the phone it was really hard to see the little one in portrait mode + the sound was crazy quiet. This helps us around the issue and we don't have to drain our phone batteries.
-
-## How to develop
-
-```bash
-go run cmd/nanit/*.go
-
-# On proto file change
-protoc --go_out . --go_opt=paths=source_relative pkg/client/websocket.proto
-
-# Run tests
-go test ./pkg/...
+```
+camera:
+- name: Nanit
+  platform: ffmpeg
+  input: rtmp://xxx.xxx.xxx.xxx:1935/local/[your_baby_uid]
 ```
 
-For some insights see [Developer notes](docs/developer-notes.md).
-
-## Disclaimer
-
-I made this program solely for learning purposes. Please use it at your own risk and always follow any terms and conditions which might be applied when communicating to Nanit servers.
-
-This program is free software. It comes without any warranty, to
-the extent permitted by applicable law. You can redistribute it
-and/or modify it under the terms of the Do What The Fuck You Want
-To Public License, Version 2, as published by Sam Hocevar. See
-http://sam.zoy.org/wtfpl/COPYING for more details.
+Restart Home Assistant and you should now have a camera entity named Nanit for use in dashboards.
