@@ -1,4 +1,4 @@
-ARG BASE_IMAGE=debian:buster
+ARG BASE_IMAGE=indiefan/nanit
 
 FROM golang:1.15.5-buster AS build
 ADD cmd /app/cmd
@@ -20,9 +20,6 @@ RUN apt-get update && apt-get install -y \
     jq
 
 RUN mkdir -p /data && \
-    # wget -O jq https://github.com/stedolan/jq/releases/download/jq-1.5/jq-linux64 && \ 
-    # chmod +x ./jq && \
-    # cp jq /usr/bin && \
     chmod +x /app/scripts/*.sh
 
 WORKDIR /app
