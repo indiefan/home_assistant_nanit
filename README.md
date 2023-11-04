@@ -1,3 +1,9 @@
+# Background
+
+This is a fork of a no-longer-maintained project (https://gitlab.com/adam.stanek/nanit) with added support for Nanit's (now required) 2FA authentication.
+
+Original readme below:
+
 # Nanit Stream Proxy
 
 This is sleepless night induced pet project to restream Nanit Baby Monitor live stream for local viewing.
