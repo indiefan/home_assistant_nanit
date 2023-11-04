@@ -24,7 +24,7 @@ func main() {
 			Password:     utils.EnvVarStr("NANIT_PASSWORD", ""),
 			RefreshToken: utils.EnvVarStr("NANIT_REFRESH_TOKEN", ""),
 		},
-		SessionFile:     utils.EnvVarStr("NANIT_SESSION_FILE", ""),
+		SessionFile:     utils.EnvVarStr("NANIT_SESSION_FILE", "/data/session.json"),
 		DataDirectories: ensureDataDirectories(),
 		HTTPEnabled:     false,
 		EventPolling: app.EventPollingOpts{
