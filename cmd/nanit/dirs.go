@@ -10,7 +10,7 @@ import (
 )
 
 func ensureDataDirectories() app.DataDirectories {
-	relDataDir := utils.EnvVarStr("NANIT_DATA_DIR", "data")
+	relDataDir := utils.EnvVarStr("NANIT_DATA_DIR", "/data")
 
 	absDataDir, filePathErr := filepath.Abs(relDataDir)
 	if filePathErr != nil {
