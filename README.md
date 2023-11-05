@@ -34,6 +34,7 @@ docker run \
   -d \
   --name=nanit \
   --restart unless-stopped \
+  -v /path/to/data:/data \
   -e NANIT_RTMP_ADDR=xxx.xxx.xxx.xxx:1935 \
   -e NANIT_LOG_LEVEL=trace \
   -p 1935:1935 \
