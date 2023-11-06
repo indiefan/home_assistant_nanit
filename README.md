@@ -38,7 +38,7 @@ docker run \
   -e NANIT_RTMP_ADDR=xxx.xxx.xxx.xxx:1935 \
   -e NANIT_LOG_LEVEL=trace \
   -p 1935:1935 \
-  indiefan/nanit:latest
+  indiefan/nanit
 ```
 
 If this is your initial run, you may want to omit the `-d` flag so you can observe the output to find your `baby_uid` (which will be needed later if you plan on connecting anything to the feed, like Home Assistant). After getting the baby id (which won't change) you can stop the container and restart it with the `-d` flag.
