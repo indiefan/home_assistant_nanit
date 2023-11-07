@@ -38,7 +38,8 @@ fi
 
 echo -e "\n"
 
-read -p 'Code (check your email): ' MFA_CODE
+# Instruct users to include quotes because otherwise leading zeros are trimmed.
+read -p 'Code (check your email), include quotes (e.g. "0000"): ' MFA_CODE
 
 # TODO: show json and disable --silent in curl when debug flag is present
 BODY=$(jq -n --arg email "$EMAIL" --arg password "$PASSWORD" --argjson mfa_code "$MFA_CODE" --argjson mfa_token "$MFA_TOKEN" '{email: $email, password: $password, mfa_token: $mfa_token, mfa_code: $mfa_code, channel: "email"}' | curl --silent --header 'nanit-api-version: 1' --header 'Content-Type: application/json' -d@- https://api.nanit.com/login)
