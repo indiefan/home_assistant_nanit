@@ -17,6 +17,7 @@ COPY --from=build /app/bin/nanit /app/bin/nanit
 COPY --from=build /app/scripts /app/scripts
 
 RUN apt-get update && apt-get install -y \
+    bash \
     curl \
     jq
 
