@@ -8,7 +8,7 @@ import (
 
 	"github.com/notedit/rtmp/format/rtmp"
 	"github.com/rs/zerolog/log"
-	"gitlab.com/adam.stanek/nanit/pkg/baby"
+	"github.com/indiefan/home_assistant_nanit/pkg/baby"
 )
 
 type rtmpHandler struct {

@@ -10,7 +10,7 @@ import (
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"github.com/sacOO7/gowebsocket"
-	"gitlab.com/adam.stanek/nanit/pkg/utils"
+	"github.com/indiefan/home_assistant_nanit/pkg/utils"
 	"google.golang.org/protobuf/proto"
 )
 

@@ -5,13 +5,13 @@ import (
 	"strings"
 	"time"
 
-	"gitlab.com/adam.stanek/nanit/pkg/baby"
-	"gitlab.com/adam.stanek/nanit/pkg/client"
-	"gitlab.com/adam.stanek/nanit/pkg/message"
-	"gitlab.com/adam.stanek/nanit/pkg/mqtt"
-	"gitlab.com/adam.stanek/nanit/pkg/rtmpserver"
-	"gitlab.com/adam.stanek/nanit/pkg/session"
-	"gitlab.com/adam.stanek/nanit/pkg/utils"
+	"github.com/indiefan/home_assistant_nanit/pkg/baby"
+	"github.com/indiefan/home_assistant_nanit/pkg/client"
+	"github.com/indiefan/home_assistant_nanit/pkg/message"
+	"github.com/indiefan/home_assistant_nanit/pkg/mqtt"
+	"github.com/indiefan/home_assistant_nanit/pkg/rtmpserver"
+	"github.com/indiefan/home_assistant_nanit/pkg/session"
+	"github.com/indiefan/home_assistant_nanit/pkg/utils"
 )
 
 // App - application container

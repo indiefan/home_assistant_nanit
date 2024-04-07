@@ -1,6 +1,6 @@
 syntax = "proto2";
 package client;
-option go_package = "gitlab.com/adam.stanek/nanit/pkg/client";
+option go_package = "github.com/indiefan/home_assistant_nanit/pkg/client";
 
 enum RequestType {
   GET_STREAMING = 3; // Not implemented on user endpoint
