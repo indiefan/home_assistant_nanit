@@ -15,9 +15,11 @@ func processSensorData(babyUID string, sensorData []*client.SensorData, stateMan
 	for _, sensorDataSet := range sensorData {
 		if *sensorDataSet.SensorType == client.SensorType_TEMPERATURE {
 			stateUpdate.SetTemperatureMilli(*sensorDataSet.ValueMilli)
-		} else if *sensorDataSet.SensorType == client.SensorType_HUMIDITY {
+		}
+		if *sensorDataSet.SensorType == client.SensorType_HUMIDITY {
 			stateUpdate.SetHumidityMilli(*sensorDataSet.ValueMilli)
-		} else if *sensorDataSet.SensorType == client.SensorType_NIGHT {
+		}
+		if *sensorDataSet.SensorType == client.SensorType_NIGHT {
 			stateUpdate.SetIsNight(*sensorDataSet.Value == 1)
 		}
 	}
