@@ -1,7 +1,7 @@
 package app
 
 import (
-	"gitlab.com/adam.stanek/nanit/pkg/mqtt"
+	"github.com/indiefan/home_assistant_nanit/pkg/mqtt"
 	"time"
 )
 

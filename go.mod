@@ -1,4 +1,4 @@
-module gitlab.com/adam.stanek/nanit
+module github.com/indiefan/home_assistant_nanit
 
 go 1.14
 

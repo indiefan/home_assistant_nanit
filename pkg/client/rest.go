@@ -10,10 +10,10 @@ import (
 	"time"
 
 	"github.com/rs/zerolog/log"
-	"gitlab.com/adam.stanek/nanit/pkg/baby"
-	"gitlab.com/adam.stanek/nanit/pkg/message"
-	"gitlab.com/adam.stanek/nanit/pkg/session"
-	"gitlab.com/adam.stanek/nanit/pkg/utils"
+	"github.com/indiefan/home_assistant_nanit/pkg/baby"
+	"github.com/indiefan/home_assistant_nanit/pkg/message"
+	"github.com/indiefan/home_assistant_nanit/pkg/session"
+	"github.com/indiefan/home_assistant_nanit/pkg/utils"
 )
 
 var myClient = &http.Client{Timeout: 10 * time.Second}

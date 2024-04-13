@@ -6,8 +6,8 @@ import (
 
 	MQTT "github.com/eclipse/paho.mqtt.golang"
 	"github.com/rs/zerolog/log"
-	"gitlab.com/adam.stanek/nanit/pkg/baby"
-	"gitlab.com/adam.stanek/nanit/pkg/utils"
+	"github.com/indiefan/home_assistant_nanit/pkg/baby"
+	"github.com/indiefan/home_assistant_nanit/pkg/utils"
 )
 
 // Connection - MQTT context
