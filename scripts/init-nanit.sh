@@ -23,6 +23,32 @@ fi
 read -p 'Nanit Email: ' EMAIL
 read -sp 'Nanit Password: ' PASSWORD
 
+# Check if jq is installed
+if ! command -v jq &> /dev/null; then
+  echo "jq is not installed. Installing..."
+
+  # Install jq using the appropriate package manager for your system
+  if [[ -f /etc/os-release ]]; then
+    # For systems using systemd
+    . /etc/os-release
+    case "$ID" in
+      debian|ubuntu|raspbian)
+        sudo apt-get update && sudo apt-get install -y jq
+        ;;
+      centos|fedora|rhel)
+        sudo yum install -y jq
+        ;;
+      *)
+        echo "Unsupported distribution. Please install jq manually."
+        exit 1
+        ;;
+    esac
+  else
+    echo "Unable to determine operating system. Please install jq manually."
+    exit 1
+  fi
+fi
+
 # TODO: show json and disable --silent in curl when debug flag is present
 LOGIN=$(jq -n --arg email "$EMAIL" --arg password "$PASSWORD" '{email: $email, password: $password, channel: "email"}' | curl --silent --header 'nanit-api-version: 1' --header 'Content-Type: application/json' -d@- https://api.nanit.com/login)
 
