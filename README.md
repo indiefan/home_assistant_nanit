@@ -43,6 +43,8 @@ docker run \
 
 If this is your initial run, you may want to omit the `-d` flag so you can observe the output to find your `baby_uid` (which will be needed later if you plan on connecting anything to the feed, like Home Assistant). After getting the baby id (which won't change) you can stop the container and restart it with the `-d` flag.
 
+As a note, the NANIT_RTMP_ADDR should be the local ip address of your docker environment, NOT the ip address of your nanit camera. 
+
 ## Home Assistant
 
 Once the server is running and mirroring the feed, you can then setup an entity in Home Assistant. Open your `configuration.yaml` file and add the following:
