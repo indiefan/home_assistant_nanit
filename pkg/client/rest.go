@@ -9,11 +9,11 @@ import (
 	"sort"
 	"time"
 
-	"github.com/rs/zerolog/log"
 	"github.com/indiefan/home_assistant_nanit/pkg/baby"
 	"github.com/indiefan/home_assistant_nanit/pkg/message"
 	"github.com/indiefan/home_assistant_nanit/pkg/session"
 	"github.com/indiefan/home_assistant_nanit/pkg/utils"
+	"github.com/rs/zerolog/log"
 )
 
 var myClient = &http.Client{Timeout: 10 * time.Second}
@@ -205,6 +205,7 @@ func (c *NanitClient) FetchBabies() []baby.Baby {
 	c.FetchAuthorized(req, data)
 
 	c.SessionStore.Session.Babies = data.Babies
+	log.Info().Msgf("First baby id: %s", data.Babies[0].UID)
 	c.SessionStore.Save()
 	return data.Babies
 }
@@ -273,4 +274,14 @@ func (c *NanitClient) FetchNewMessages(babyUID string, defaultMessageTimeout tim
 	log.Debug().Msgf("%+v\n", filteredMessages)
 
 	return filteredMessages
+}
+
+// GetWebsocket returns a websocket connection manager for the given baby
+func (c *NanitClient) GetWebsocket(babyUID string, cameraUID string, babyStateManager *baby.StateManager) *WebsocketConnectionManager {
+	return &WebsocketConnectionManager{
+		BabyUID:          babyUID,
+		CameraUID:        cameraUID,
+		Session:          c.SessionStore.Session,
+		BabyStateManager: babyStateManager,
+	}
 }

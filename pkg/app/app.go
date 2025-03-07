@@ -21,6 +21,7 @@ type App struct {
 	BabyStateManager *baby.StateManager
 	RestClient       *client.NanitClient
 	MQTTConnection   *mqtt.Connection
+	websockets       map[string]*client.WebsocketConnectionManager
 }
 
 // NewApp - constructor
@@ -37,10 +38,11 @@ func NewApp(opts Opts) *App {
 			RefreshToken: opts.NanitCredentials.RefreshToken,
 			SessionStore: sessionStore,
 		},
+		websockets: make(map[string]*client.WebsocketConnectionManager),
 	}
 
 	if opts.MQTT != nil {
-		instance.MQTTConnection = mqtt.NewConnection(*opts.MQTT)
+		instance.MQTTConnection = mqtt.NewConnection(*opts.MQTT, instance.RestClient, instance)
 	}
 
 	return instance
@@ -218,4 +220,9 @@ func (app *App) getLocalStreamURL(babyUID string) string {
 	}
 
 	return ""
+}
+
+// GetWebsocket implements WebsocketProvider interface
+func (app *App) GetWebsocket(babyUID string) *client.WebsocketConnectionManager {
+	return app.websockets[babyUID]
 }

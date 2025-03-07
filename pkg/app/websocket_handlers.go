@@ -3,10 +3,10 @@ package app
 import (
 	"time"
 
-	"github.com/rs/zerolog/log"
 	"github.com/indiefan/home_assistant_nanit/pkg/baby"
 	"github.com/indiefan/home_assistant_nanit/pkg/client"
 	"github.com/indiefan/home_assistant_nanit/pkg/utils"
+	"github.com/rs/zerolog/log"
 )
 
 func processSensorData(babyUID string, sensorData []*client.SensorData, stateManager *baby.StateManager) {
@@ -53,7 +53,7 @@ func requestLocalStreaming(babyUID string, targetURL string, streamingStatus cli
 			if err.Error() == "Forbidden: Number of Mobile App connections above limit, declining connection" {
 				log.Warn().Err(err).Msg("Too many app connections, waiting for local connection to become available...")
 				stateManager.Update(babyUID, *baby.NewState().SetStreamRequestState(baby.StreamRequestState_RequestFailed))
-                                time.Sleep(300 * time.Second)
+				time.Sleep(300 * time.Second)
 				continue
 			} else if err.Error() != "Request timeout" {
 				if stateManager.GetBabyState(babyUID).GetStreamState() == baby.StreamState_Alive {
@@ -80,5 +80,24 @@ func requestLocalStreaming(babyUID string, targetURL string, streamingStatus cli
 			stateManager.Update(babyUID, *baby.NewState().SetStreamRequestState(baby.StreamRequestState_Requested))
 			return
 		}
+	}
+}
+
+func requestLightControl(babyUID string, enabled bool, conn *client.WebsocketConnection, stateManager *baby.StateManager) {
+	nightLight := client.Control_LIGHT_OFF
+	if enabled {
+		nightLight = client.Control_LIGHT_ON
+	}
+
+	waitResp := conn.SendRequest(client.RequestType_PUT_CONTROL, &client.Request{
+		Control: &client.Control{
+			NightLight: &nightLight,
+		},
+	})
+
+	if _, err := waitResp(5 * time.Second); err != nil {
+		log.Error().Err(err).Msg("Light control failed")
+	} else {
+		stateManager.Update(babyUID, *baby.NewState().SetNightLight(enabled))
 	}
 }
