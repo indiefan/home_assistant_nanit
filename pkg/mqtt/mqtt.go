@@ -80,14 +80,8 @@ func (conn *Connection) handleCommand(mqttConn mqttClient.Client, msg mqttClient
 		for _, b := range conn.API.SessionStore.Session.Babies {
 			if b.UID == babyUID {
 				if ws := conn.wsProvider.GetWebsocket(babyUID); ws != nil {
-					log.Debug().
-						Str("baby", babyUID).
-						Str("camera", b.CameraUID).
-						Msg("Got websocket connection")
-
 					done := make(chan struct{})
 					go func() {
-						log.Debug().Msg("Calling WithReadyConnection")
 						ws.WithReadyConnection(func(wsConn *client.WebsocketConnection, ctx utils.GracefulContext) {
 							defer close(done)
 							log.Debug().Msg("Inside WithReadyConnection callback - connection is ready")
@@ -106,28 +100,7 @@ func (conn *Connection) handleCommand(mqttConn mqttClient.Client, msg mqttClient
 							}
 
 							// Send request and wait for response
-							waitResp := wsConn.SendRequest(client.RequestType_PUT_CONTROL, req)
-
-							// Add handler to see all messages
-							wsConn.RegisterMessageHandler(func(m *client.Message, _ *client.WebsocketConnection) {
-								if m.Type != nil && *m.Type == client.Message_RESPONSE {
-									log.Debug().
-										Interface("requestId", m.Response.GetRequestId()).
-										Interface("requestType", m.Response.GetRequestType()).
-										Interface("statusCode", m.Response.GetStatusCode()).
-										Interface("statusMessage", m.Response.GetStatusMessage()).
-										Msg("Got response")
-								}
-							})
-
-							if resp, err := waitResp(15 * time.Second); err != nil {
-								log.Error().Err(err).Msg("Light control failed")
-							} else {
-								log.Debug().
-									Int32("statusCode", *resp.StatusCode).
-									Str("statusMessage", *resp.StatusMessage).
-									Msg("Light control response")
-							}
+							wsConn.SendRequest(client.RequestType_PUT_CONTROL, req)
 						})
 						log.Debug().Msg("WithReadyConnection returned")
 					}()

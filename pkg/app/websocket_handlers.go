@@ -101,3 +101,11 @@ func requestLightControl(babyUID string, enabled bool, conn *client.WebsocketCon
 		stateManager.Update(babyUID, *baby.NewState().SetNightLight(enabled))
 	}
 }
+
+func processLight(babyUID string, control *client.Control, stateManager *baby.StateManager) {
+	if control.NightLight != nil {
+		stateUpdate := baby.State{}
+		stateUpdate.SetNightLight(*control.NightLight == client.Control_LIGHT_ON)
+		stateManager.Update(babyUID, stateUpdate)
+	}
+}

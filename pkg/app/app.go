@@ -88,6 +88,7 @@ func (app *App) handleBaby(baby baby.Baby, ctx utils.GracefulContext) {
 	if app.Opts.RTMP != nil || app.MQTTConnection != nil {
 		// Websocket connection
 		ws := client.NewWebsocketConnectionManager(baby.UID, baby.CameraUID, app.SessionStore.Session, app.RestClient, app.BabyStateManager)
+		app.websockets[baby.UID] = ws
 
 		ws.WithReadyConnection(func(conn *client.WebsocketConnection, childCtx utils.GracefulContext) {
 			app.runWebsocket(baby.UID, conn, childCtx)
@@ -139,6 +140,8 @@ func (app *App) runWebsocket(babyUID string, conn *client.WebsocketConnection, c
 		if *m.Type == client.Message_REQUEST && m.Request != nil {
 			if *m.Request.Type == client.RequestType_PUT_SENSOR_DATA && len(m.Request.SensorData_) > 0 {
 				processSensorData(babyUID, m.Request.SensorData_, app.BabyStateManager)
+			} else if *m.Request.Type == client.RequestType_PUT_CONTROL && m.Request.Control != nil {
+				processLight(babyUID, m.Request.Control, app.BabyStateManager)
 			}
 		}
 	})
