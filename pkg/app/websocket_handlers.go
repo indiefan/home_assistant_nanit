@@ -83,23 +83,17 @@ func requestLocalStreaming(babyUID string, targetURL string, streamingStatus cli
 	}
 }
 
-func requestLightControl(babyUID string, enabled bool, conn *client.WebsocketConnection, stateManager *baby.StateManager) {
+func requestLightControl(enabled bool, conn *client.WebsocketConnection) {
 	nightLight := client.Control_LIGHT_OFF
 	if enabled {
 		nightLight = client.Control_LIGHT_ON
 	}
 
-	waitResp := conn.SendRequest(client.RequestType_PUT_CONTROL, &client.Request{
+	conn.SendRequest(client.RequestType_PUT_CONTROL, &client.Request{
 		Control: &client.Control{
 			NightLight: &nightLight,
 		},
 	})
-
-	if _, err := waitResp(5 * time.Second); err != nil {
-		log.Error().Err(err).Msg("Light control failed")
-	} else {
-		stateManager.Update(babyUID, *baby.NewState().SetNightLight(enabled))
-	}
 }
 
 func processLight(babyUID string, control *client.Control, stateManager *baby.StateManager) {

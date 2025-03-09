@@ -38,11 +38,10 @@ func NewApp(opts Opts) *App {
 			RefreshToken: opts.NanitCredentials.RefreshToken,
 			SessionStore: sessionStore,
 		},
-		websockets: make(map[string]*client.WebsocketConnectionManager),
 	}
 
 	if opts.MQTT != nil {
-		instance.MQTTConnection = mqtt.NewConnection(*opts.MQTT, instance.RestClient, instance)
+		instance.MQTTConnection = mqtt.NewConnection(*opts.MQTT)
 	}
 
 	return instance
@@ -88,7 +87,6 @@ func (app *App) handleBaby(baby baby.Baby, ctx utils.GracefulContext) {
 	if app.Opts.RTMP != nil || app.MQTTConnection != nil {
 		// Websocket connection
 		ws := client.NewWebsocketConnectionManager(baby.UID, baby.CameraUID, app.SessionStore.Session, app.RestClient, app.BabyStateManager)
-		app.websockets[baby.UID] = ws
 
 		ws.WithReadyConnection(func(conn *client.WebsocketConnection, childCtx utils.GracefulContext) {
 			app.runWebsocket(baby.UID, conn, childCtx)
@@ -144,6 +142,8 @@ func (app *App) runWebsocket(babyUID string, conn *client.WebsocketConnection, c
 			}
 		}
 	})
+
+	app.MQTTConnection.RegisterLightHandler(babyUID, conn)
 
 	// Ask for sensor data (initial request)
 	conn.SendRequest(client.RequestType_GET_SENSOR_DATA, &client.Request{
@@ -222,9 +222,4 @@ func (app *App) getLocalStreamURL(babyUID string) string {
 	}
 
 	return ""
-}
-
-// GetWebsocket implements WebsocketProvider interface
-func (app *App) GetWebsocket(babyUID string) *client.WebsocketConnectionManager {
-	return app.websockets[babyUID]
 }

@@ -12,31 +12,32 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-// WebsocketProvider provides access to WebSocket connections
-type WebsocketProvider interface {
-	GetWebsocket(babyUID string) *client.WebsocketConnectionManager
-}
-
 // Connection - MQTT context
 type Connection struct {
 	Opts         Opts
 	StateManager *baby.StateManager
-	API          *client.NanitClient
-	wsProvider   WebsocketProvider
+	client       mqttClient.Client
 }
 
 // NewConnection - constructor
-func NewConnection(opts Opts, api *client.NanitClient, wsProvider WebsocketProvider) *Connection {
+func NewConnection(opts Opts) *Connection {
 	return &Connection{
-		Opts:       opts,
-		API:        api,
-		wsProvider: wsProvider,
+		Opts: opts,
 	}
 }
 
 // Run - runs the mqtt connection handler
 func (conn *Connection) Run(manager *baby.StateManager, ctx utils.GracefulContext) {
 	conn.StateManager = manager
+
+	opts := mqttClient.NewClientOptions()
+	opts.AddBroker(conn.Opts.BrokerURL)
+	opts.SetClientID(conn.Opts.TopicPrefix)
+	opts.SetUsername(conn.Opts.Username)
+	opts.SetPassword(conn.Opts.Password)
+	opts.SetCleanSession(false)
+
+	conn.client = mqttClient.NewClient(opts)
 
 	utils.RunWithPerseverance(func(attempt utils.AttemptContext) {
 		runMqtt(conn, attempt)
@@ -51,88 +52,137 @@ func (conn *Connection) Run(manager *baby.StateManager, ctx utils.GracefulContex
 	})
 }
 
-// handleCommand - handles command messages from MQTT
-func (conn *Connection) handleCommand(mqttConn mqttClient.Client, msg mqttClient.Message) {
-	// Extract baby UID and command from topic
-	parts := strings.Split(msg.Topic(), "/")
-	if len(parts) < 4 {
-		log.Error().Str("topic", msg.Topic()).Msg("Invalid command topic format")
-		return
+// // handleCommand - handles command messages from MQTT
+// func (conn *Connection) handleLightCommand(mqttConn mqttClient.Client, msg mqttClient.Message) {
+// 	// Extract baby UID and command from topic
+// 	parts := strings.Split(msg.Topic(), "/")
+// 	if len(parts) < 4 {
+// 		log.Error().Str("topic", msg.Topic()).Msg("Invalid command topic format")
+// 		return
+// 	}
+
+// 	babyUID := parts[2]
+// 	command := parts[3]
+
+// 	// Validate baby UID
+// 	baby.EnsureValidBabyUID(babyUID)
+
+// 	// Handle different commands
+// 	switch command {
+// 	case "light":
+// 		enabled := string(msg.Payload()) == "on"
+// 		log.Debug().
+// 			Str("baby", babyUID).
+// 			Bool("enabled", enabled).
+// 			Str("payload", string(msg.Payload())).
+// 			Msg("Received light command")
+
+// 		// Get the baby info from the session
+// 		for _, b := range conn.API.SessionStore.Session.Babies {
+// 			if b.UID == babyUID {
+// 				if ws := conn.wsProvider.GetWebsocket(babyUID); ws != nil {
+// 					done := make(chan struct{})
+// 					go func() {
+// 						ws.WithReadyConnection(func(wsConn *client.WebsocketConnection, ctx utils.GracefulContext) {
+// 							defer close(done)
+// 							log.Debug().Msg("Inside WithReadyConnection callback - connection is ready")
+
+// 							nightLight := client.Control_LIGHT_OFF
+// 							if enabled {
+// 								nightLight = client.Control_LIGHT_ON
+// 							}
+
+// 							// Create request with all required fields
+// 							req := &client.Request{
+// 								Type: client.RequestType_PUT_CONTROL.Enum(),
+// 								Control: &client.Control{
+// 									NightLight: &nightLight,
+// 								},
+// 							}
+
+// 							// Send request and wait for response
+// 							wsConn.SendRequest(client.RequestType_PUT_CONTROL, req)
+// 						})
+// 						log.Debug().Msg("WithReadyConnection returned")
+// 					}()
+
+// 					select {
+// 					case <-done:
+// 						log.Debug().Msg("Light command completed")
+// 					case <-time.After(20 * time.Second):
+// 						log.Error().Msg("Timeout waiting for WebSocket connection to be ready")
+// 					}
+// 				} else {
+// 					log.Error().Str("baby", babyUID).Msg("Failed to get websocket connection")
+// 				}
+// 				return
+// 			}
+// 		}
+// 		log.Error().Str("baby", babyUID).Msg("Baby not found in session")
+// 	default:
+// 		log.Warn().Str("command", command).Msg("Unknown command received")
+// 	}
+// }
+
+func (conn *Connection) RegisterLightHandler(babyUID string, ws *client.WebsocketConnection) {
+	commandTopic := fmt.Sprintf("%v/babies/%v/night_light/switch", conn.Opts.TopicPrefix, babyUID)
+	log.Debug().
+		Str("topic", commandTopic).
+		Msg("Subscribing to command topic")
+
+	lightCommandHandler := func(mqttConn mqttClient.Client, msg mqttClient.Message) {
+		// Extract baby UID and command from topic
+		parts := strings.Split(msg.Topic(), "/")
+		if len(parts) < 4 {
+			log.Error().Str("topic", msg.Topic()).Msg("Invalid command topic format")
+			return
+		}
+
+		babyUID := parts[2]
+		command := parts[4]
+
+		// Validate baby UID
+		baby.EnsureValidBabyUID(babyUID)
+
+		// Handle different commands
+		switch command {
+		case "switch":
+			enabled := string(msg.Payload()) == "on"
+			log.Debug().
+				Str("baby", babyUID).
+				Bool("enabled", enabled).
+				Str("payload", string(msg.Payload())).
+				Msg("Received light command")
+
+			nightLight := client.Control_LIGHT_OFF
+			if enabled {
+				nightLight = client.Control_LIGHT_ON
+			}
+
+			// Create request with all required fields
+			req := &client.Request{
+				Type: client.RequestType_PUT_CONTROL.Enum(),
+				Control: &client.Control{
+					NightLight: &nightLight,
+				},
+			}
+
+			// Send request and wait for response
+			ws.SendRequest(client.RequestType_PUT_CONTROL, req)
+		default:
+			log.Warn().Str("command", command).Msg("Unknown command received")
+		}
 	}
 
-	babyUID := parts[2]
-	command := parts[3]
-
-	// Validate baby UID
-	baby.EnsureValidBabyUID(babyUID)
-
-	// Handle different commands
-	switch command {
-	case "light":
-		enabled := string(msg.Payload()) == "on"
-		log.Debug().
-			Str("baby", babyUID).
-			Bool("enabled", enabled).
-			Str("payload", string(msg.Payload())).
-			Msg("Received light command")
-
-		// Get the baby info from the session
-		for _, b := range conn.API.SessionStore.Session.Babies {
-			if b.UID == babyUID {
-				if ws := conn.wsProvider.GetWebsocket(babyUID); ws != nil {
-					done := make(chan struct{})
-					go func() {
-						ws.WithReadyConnection(func(wsConn *client.WebsocketConnection, ctx utils.GracefulContext) {
-							defer close(done)
-							log.Debug().Msg("Inside WithReadyConnection callback - connection is ready")
-
-							nightLight := client.Control_LIGHT_OFF
-							if enabled {
-								nightLight = client.Control_LIGHT_ON
-							}
-
-							// Create request with all required fields
-							req := &client.Request{
-								Type: client.RequestType_PUT_CONTROL.Enum(),
-								Control: &client.Control{
-									NightLight: &nightLight,
-								},
-							}
-
-							// Send request and wait for response
-							wsConn.SendRequest(client.RequestType_PUT_CONTROL, req)
-						})
-						log.Debug().Msg("WithReadyConnection returned")
-					}()
-
-					select {
-					case <-done:
-						log.Debug().Msg("Light command completed")
-					case <-time.After(20 * time.Second):
-						log.Error().Msg("Timeout waiting for WebSocket connection to be ready")
-					}
-				} else {
-					log.Error().Str("baby", babyUID).Msg("Failed to get websocket connection")
-				}
-				return
-			}
-		}
-		log.Error().Str("baby", babyUID).Msg("Baby not found in session")
-	default:
-		log.Warn().Str("command", command).Msg("Unknown command received")
+	if token := conn.client.Subscribe(commandTopic, 0, lightCommandHandler); token.Wait() && token.Error() != nil {
+		log.Error().Err(token.Error()).Str("topic", commandTopic).Msg("Failed to subscribe to command topic")
+		return
 	}
 }
 
 func runMqtt(conn *Connection, attempt utils.AttemptContext) {
-	opts := mqttClient.NewClientOptions()
-	opts.AddBroker(conn.Opts.BrokerURL)
-	opts.SetClientID(conn.Opts.TopicPrefix)
-	opts.SetUsername(conn.Opts.Username)
-	opts.SetPassword(conn.Opts.Password)
-	opts.SetCleanSession(false)
 
-	client := mqttClient.NewClient(opts)
-	if token := client.Connect(); token.Wait() && token.Error() != nil {
+	if token := conn.client.Connect(); token.Wait() && token.Error() != nil {
 		log.Error().Str("broker_url", conn.Opts.BrokerURL).Err(token.Error()).Msg("Unable to connect to MQTT broker")
 		attempt.Fail(token.Error())
 		return
@@ -145,7 +195,7 @@ func runMqtt(conn *Connection, attempt utils.AttemptContext) {
 			topic := fmt.Sprintf("%v/babies/%v/%v", conn.Opts.TopicPrefix, babyUID, key)
 			log.Trace().Str("topic", topic).Interface("value", value).Msg("MQTT publish")
 
-			token := client.Publish(topic, 0, false, fmt.Sprintf("%v", value))
+			token := conn.client.Publish(topic, 0, false, fmt.Sprintf("%v", value))
 			if token.Wait(); token.Error() != nil {
 				log.Error().Err(token.Error()).Msgf("Unable to publish %v update", key)
 			}
@@ -160,22 +210,20 @@ func runMqtt(conn *Connection, attempt utils.AttemptContext) {
 		}
 	})
 
-	// Subscribe to command topics
-	commandTopic := fmt.Sprintf("%v/babies/+/+/set", conn.Opts.TopicPrefix)
-	log.Debug().
-		Str("topic", commandTopic).
-		Msg("Subscribing to command topic")
-
-	if token := client.Subscribe(commandTopic, 0, conn.handleCommand); token.Wait() && token.Error() != nil {
-		log.Error().Err(token.Error()).Msg("Failed to subscribe to command topics")
-		attempt.Fail(token.Error())
-		return
-	}
+	// subscribe to night light updates on StateManager and send out the mqtt message on the handler!
+	// initialise this mqtt from the app.. but we still need to get the websocket for the baby somehow and only the app has it.
+	// ....app.runWebsocket should register a handler into mqtt class to handle the night lights updates coming from mqtt and sending them to the websocket
+	// fwe
+	// need a new file called mqtt_handlers.go to contain the handlers to switch teh lighs. these need to be registered by app under runWebsocket (since they need the websocket info)
+	// to function. Its one websocket per baby - so we need one light switch handler per baby/websocket the handler could be handle_lights(baby, conn, stateManager, ws) - this should have
+	// the below code to start, and then the content of handleCommand. This way we can cleint.Subscribe with a function that contains teh ws/baby etc and only to commands specific to an
+	// existing baby
+	// TODO
 
 	// Wait until interrupt signal is received
 	<-attempt.Done()
 
 	log.Debug().Msg("Closing MQTT connection on interrupt")
 	unsubscribe()
-	client.Disconnect(250)
+	conn.client.Disconnect(250)
 }
