@@ -21,7 +21,6 @@ type App struct {
 	BabyStateManager *baby.StateManager
 	RestClient       *client.NanitClient
 	MQTTConnection   *mqtt.Connection
-	websockets       map[string]*client.WebsocketConnectionManager
 }
 
 // NewApp - constructor

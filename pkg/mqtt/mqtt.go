@@ -5,7 +5,7 @@ import (
 	"strings"
 	"time"
 
-	mqttClient "github.com/eclipse/paho.mqtt.golang"
+	MQTT "github.com/eclipse/paho.mqtt.golang"
 	"github.com/indiefan/home_assistant_nanit/pkg/baby"
 	"github.com/indiefan/home_assistant_nanit/pkg/client"
 	"github.com/indiefan/home_assistant_nanit/pkg/utils"
@@ -16,7 +16,7 @@ import (
 type Connection struct {
 	Opts         Opts
 	StateManager *baby.StateManager
-	client       mqttClient.Client
+	client       MQTT.Client
 }
 
 // NewConnection - constructor
@@ -30,14 +30,14 @@ func NewConnection(opts Opts) *Connection {
 func (conn *Connection) Run(manager *baby.StateManager, ctx utils.GracefulContext) {
 	conn.StateManager = manager
 
-	opts := mqttClient.NewClientOptions()
+	opts := MQTT.NewClientOptions()
 	opts.AddBroker(conn.Opts.BrokerURL)
 	opts.SetClientID(conn.Opts.TopicPrefix)
 	opts.SetUsername(conn.Opts.Username)
 	opts.SetPassword(conn.Opts.Password)
 	opts.SetCleanSession(false)
 
-	conn.client = mqttClient.NewClient(opts)
+	conn.client = MQTT.NewClient(opts)
 
 	utils.RunWithPerseverance(func(attempt utils.AttemptContext) {
 		runMqtt(conn, attempt)
@@ -130,7 +130,7 @@ func (conn *Connection) RegisterLightHandler(babyUID string, ws *client.Websocke
 		Str("topic", commandTopic).
 		Msg("Subscribing to command topic")
 
-	lightCommandHandler := func(mqttConn mqttClient.Client, msg mqttClient.Message) {
+	lightCommandHandler := func(mqttConn MQTT.Client, msg MQTT.Message) {
 		// Extract baby UID and command from topic
 		parts := strings.Split(msg.Topic(), "/")
 		if len(parts) < 4 {
@@ -159,16 +159,11 @@ func (conn *Connection) RegisterLightHandler(babyUID string, ws *client.Websocke
 				nightLight = client.Control_LIGHT_ON
 			}
 
-			// Create request with all required fields
-			req := &client.Request{
-				Type: client.RequestType_PUT_CONTROL.Enum(),
+			ws.SendRequest(client.RequestType_PUT_CONTROL, &client.Request{
 				Control: &client.Control{
 					NightLight: &nightLight,
 				},
-			}
-
-			// Send request and wait for response
-			ws.SendRequest(client.RequestType_PUT_CONTROL, req)
+			})
 		default:
 			log.Warn().Str("command", command).Msg("Unknown command received")
 		}
@@ -209,16 +204,6 @@ func runMqtt(conn *Connection, attempt utils.AttemptContext) {
 			publish("is_stream_alive", *state.StreamState == baby.StreamState_Alive)
 		}
 	})
-
-	// subscribe to night light updates on StateManager and send out the mqtt message on the handler!
-	// initialise this mqtt from the app.. but we still need to get the websocket for the baby somehow and only the app has it.
-	// ....app.runWebsocket should register a handler into mqtt class to handle the night lights updates coming from mqtt and sending them to the websocket
-	// fwe
-	// need a new file called mqtt_handlers.go to contain the handlers to switch teh lighs. these need to be registered by app under runWebsocket (since they need the websocket info)
-	// to function. Its one websocket per baby - so we need one light switch handler per baby/websocket the handler could be handle_lights(baby, conn, stateManager, ws) - this should have
-	// the below code to start, and then the content of handleCommand. This way we can cleint.Subscribe with a function that contains teh ws/baby etc and only to commands specific to an
-	// existing baby
-	// TODO
 
 	// Wait until interrupt signal is received
 	<-attempt.Done()
