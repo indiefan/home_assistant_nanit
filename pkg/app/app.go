@@ -106,19 +106,20 @@ func (app *App) handleBaby(baby baby.Baby, ctx utils.GracefulContext) {
 func (app *App) pollMessages(babyUID string, babyStateManager *baby.StateManager) {
 	newMessages := app.RestClient.FetchNewMessages(babyUID, app.Opts.EventPolling.MessageTimeout)
 
-	for {
-		for _, msg := range newMessages {
-			switch msg.Type {
-			case message.SoundEventMessageType:
-				go babyStateManager.NotifySoundSubscribers(babyUID, time.Time(msg.Time))
-			case message.MotionEventMessageType:
-				go babyStateManager.NotifyMotionSubscribers(babyUID, time.Time(msg.Time))
-			}
+	for _, msg := range newMessages {
+		switch msg.Type {
+		case message.SoundEventMessageType:
+			go babyStateManager.NotifySoundSubscribers(babyUID, time.Time(msg.Time))
+			break
+		case message.MotionEventMessageType:
+			go babyStateManager.NotifyMotionSubscribers(babyUID, time.Time(msg.Time))
+			break
 		}
-
-		// wait for the specified interval
-		time.Sleep(app.Opts.EventPolling.PollingInterval)
 	}
+
+	// wait for the specified interval
+	time.Sleep(app.Opts.EventPolling.PollingInterval)
+	app.pollMessages(babyUID, babyStateManager)
 }
 
 func (app *App) runWebsocket(babyUID string, conn *client.WebsocketConnection, childCtx utils.GracefulContext) {
