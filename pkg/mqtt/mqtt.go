@@ -147,7 +147,7 @@ func (conn *Connection) RegisterLightHandler(babyUID string, ws *client.Websocke
 		// Handle different commands
 		switch command {
 		case "switch":
-			enabled := string(msg.Payload()) == "on"
+			enabled := string(msg.Payload()) == "true"
 			log.Debug().
 				Str("baby", babyUID).
 				Bool("enabled", enabled).
@@ -158,7 +158,6 @@ func (conn *Connection) RegisterLightHandler(babyUID string, ws *client.Websocke
 			if enabled {
 				nightLight = client.Control_LIGHT_ON
 			}
-
 			ws.SendRequest(client.RequestType_PUT_CONTROL, &client.Request{
 				Control: &client.Control{
 					NightLight: &nightLight,

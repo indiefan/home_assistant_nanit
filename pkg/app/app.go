@@ -128,6 +128,8 @@ func (app *App) runWebsocket(babyUID string, conn *client.WebsocketConnection, c
 		if *m.Type == client.Message_RESPONSE && m.Response != nil {
 			if *m.Response.RequestType == client.RequestType_GET_SENSOR_DATA && len(m.Response.SensorData) > 0 {
 				processSensorData(babyUID, m.Response.SensorData, app.BabyStateManager)
+			} else if *m.Response.RequestType == client.RequestType_GET_CONTROL && m.Response.Control != nil {
+				processLight(babyUID, m.Response.Control, app.BabyStateManager)
 			}
 		} else
 
@@ -143,6 +145,11 @@ func (app *App) runWebsocket(babyUID string, conn *client.WebsocketConnection, c
 	})
 
 	app.MQTTConnection.RegisterLightHandler(babyUID, conn)
+
+	// Get the initial state of the light
+	conn.SendRequest(client.RequestType_GET_CONTROL, &client.Request{GetControl_: &client.GetControl{
+		NightLight: utils.ConstRefBool(true),
+	}})
 
 	// Ask for sensor data (initial request)
 	conn.SendRequest(client.RequestType_GET_SENSOR_DATA, &client.Request{
