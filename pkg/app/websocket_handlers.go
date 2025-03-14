@@ -90,3 +90,15 @@ func processLight(babyUID string, control *client.Control, stateManager *baby.St
 		stateManager.Update(babyUID, stateUpdate)
 	}
 }
+
+func sendLightCommand(nightLightState bool, conn *client.WebsocketConnection) {
+	nightLight := client.Control_LIGHT_OFF
+	if nightLightState {
+		nightLight = client.Control_LIGHT_ON
+	}
+	conn.SendRequest(client.RequestType_PUT_CONTROL, &client.Request{
+		Control: &client.Control{
+			NightLight: &nightLight,
+		},
+	})
+}

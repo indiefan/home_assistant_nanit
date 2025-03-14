@@ -7,16 +7,18 @@ import (
 
 	MQTT "github.com/eclipse/paho.mqtt.golang"
 	"github.com/indiefan/home_assistant_nanit/pkg/baby"
-	"github.com/indiefan/home_assistant_nanit/pkg/client"
 	"github.com/indiefan/home_assistant_nanit/pkg/utils"
 	"github.com/rs/zerolog/log"
 )
 
+type SendLightCommandHandler func(nightLightState bool)
+
 // Connection - MQTT context
 type Connection struct {
-	Opts         Opts
-	StateManager *baby.StateManager
-	client       MQTT.Client
+	Opts                    Opts
+	StateManager            *baby.StateManager
+	client                  MQTT.Client
+	sendLightCommandHandler SendLightCommandHandler
 }
 
 // NewConnection - constructor
@@ -52,13 +54,17 @@ func (conn *Connection) Run(manager *baby.StateManager, ctx utils.GracefulContex
 	})
 }
 
-func (conn *Connection) RegisterLightHandler(babyUID string, ws *client.WebsocketConnection) {
-	commandTopic := fmt.Sprintf("%v/babies/%v/night_light/switch", conn.Opts.TopicPrefix, babyUID)
+func (conn *Connection) RegisterLightHandler(sendLightCommandHandler SendLightCommandHandler) {
+	conn.sendLightCommandHandler = sendLightCommandHandler
+}
+
+func (conn *Connection) subscribeToLightCommand() {
+	commandTopic := fmt.Sprintf("%v/babies/+/night_light/switch", conn.Opts.TopicPrefix)
 	log.Debug().
 		Str("topic", commandTopic).
 		Msg("Subscribing to command topic")
 
-	lightCommandHandler := func(mqttConn MQTT.Client, msg MQTT.Message) {
+	lightMessageHandler := func(mqttConn MQTT.Client, msg MQTT.Message) {
 		// Extract baby UID and command from topic
 		parts := strings.Split(msg.Topic(), "/")
 		if len(parts) < 4 {
@@ -82,23 +88,14 @@ func (conn *Connection) RegisterLightHandler(babyUID string, ws *client.Websocke
 				Str("payload", string(msg.Payload())).
 				Msg("Received light command")
 
-			nightLight := client.Control_LIGHT_OFF
-			if enabled {
-				nightLight = client.Control_LIGHT_ON
-			}
-			ws.SendRequest(client.RequestType_PUT_CONTROL, &client.Request{
-				Control: &client.Control{
-					NightLight: &nightLight,
-				},
-			})
+			conn.sendLightCommandHandler(enabled)
 		default:
 			log.Warn().Str("command", command).Msg("Unknown command received")
 		}
 	}
 
-	if token := conn.client.Subscribe(commandTopic, 0, lightCommandHandler); token.Wait() && token.Error() != nil {
+	if token := conn.client.Subscribe(commandTopic, 0, lightMessageHandler); token.Wait() && token.Error() != nil {
 		log.Error().Err(token.Error()).Str("topic", commandTopic).Msg("Failed to subscribe to command topic")
-		return
 	}
 }
 
@@ -131,6 +128,9 @@ func runMqtt(conn *Connection, attempt utils.AttemptContext) {
 			publish("is_stream_alive", *state.StreamState == baby.StreamState_Alive)
 		}
 	})
+
+	// Subscribe to accept light mqtt messages
+	conn.subscribeToLightCommand()
 
 	// Wait until interrupt signal is received
 	<-attempt.Done()
