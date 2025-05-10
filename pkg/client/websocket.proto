@@ -74,6 +74,13 @@ message GetSensorData {
   optional bool night = 7;
 }
 
+message GetControl {
+  optional bool ptz = 1;
+  optional bool nightLight = 2;
+  optional bool nightLightTimeout = 3;
+  optional bool sensorDataTransferEn = 4;
+}
+
 message Control {
   optional bool forceConnectToServer = 5;
   optional int32 nightLightTimeout = 6;
@@ -233,6 +240,7 @@ message Request {
 
   optional Streaming streaming = 4;
   optional Control control = 15;
+  optional GetControl getControl = 17;
   optional Settings settings = 5;
   optional Status status = 7;
   optional GetStatus getStatus = 8;
@@ -249,6 +257,8 @@ message Response {
   optional Status status = 5;
   repeated SensorData sensorData = 9;
   optional Settings settings = 6;
+
+  optional Control control = 13;
 }
 
 message Message {

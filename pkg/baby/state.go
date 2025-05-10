@@ -36,6 +36,7 @@ type State struct {
 	IsNight          *bool
 	TemperatureMilli *int32
 	HumidityMilli    *int32
+	NightLight         *bool
 }
 
 // NewState - constructor
@@ -223,4 +224,13 @@ func (state *State) GetIsWebsocketAlive() bool {
 func (state *State) SetWebsocketAlive(value bool) *State {
 	state.IsWebsocketAlive = &value
 	return state
+}
+
+func (s *State) SetNightLight(enabled bool) *State {
+	s.NightLight = &enabled
+	return s
+}
+
+func (s *State) GetNightLight() bool {
+	return s.NightLight != nil && *s.NightLight
 }

@@ -1,6 +1,6 @@
 ARG BASE_IMAGE=indiefan/nanit
 
-FROM --platform=$BUILDPLATFORM golang:1.15.5-buster AS build
+FROM --platform=$BUILDPLATFORM golang:1.24.0 AS build
 ADD cmd /app/cmd
 ADD pkg /app/pkg
 ADD go.mod /app/
