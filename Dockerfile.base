@@ -1,5 +1,0 @@
-FROM debian:buster
-RUN apt-get -yqq update && \
-    apt-get install -yq --no-install-recommends ca-certificates ffmpeg && \
-    apt-get autoremove -y && \
-    apt-get clean -y
