@@ -13,13 +13,13 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        platform:
-          - linux/amd64
-          - linux/386
-          - linux/arm/v7
-          - linux/arm/v8
-          - linux/arm64
-          - linux/arm64/v8
+        include:
+          - { platform: linux/amd64, digest_name: amd64 }
+          - { platform: linux/386, digest_name: 386 }
+          - { platform: linux/arm/v7, digest_name: arm_v7 }
+          - { platform: linux/arm/v8, digest_name: arm_v8 }
+          - { platform: linux/arm64, digest_name: arm64 }
+          - { platform: linux/arm64/v8, digest_name: arm64_v8 }
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -53,7 +53,7 @@ jobs:
       - name: Upload digest
         uses: actions/upload-artifact@v4
         with:
-          name: digests
+          name: ${{ matrix.digest_name }}
           path: /tmp/digests/*
           if-no-files-found: error
           retention-days: 1
