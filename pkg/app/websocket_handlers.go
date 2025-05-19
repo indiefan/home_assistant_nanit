@@ -102,3 +102,19 @@ func sendLightCommand(nightLightState bool, conn *client.WebsocketConnection) {
 		},
 	})
 }
+
+func processStandby(babyUID string, settings *client.Settings, stateManager *baby.StateManager) {
+	if settings.SleepMode != nil {
+		stateUpdate := baby.State{}
+		stateUpdate.SetStandby(*settings.SleepMode)
+		stateManager.Update(babyUID, stateUpdate)
+	}
+}
+
+func sendStandbyCommand(standbyState bool, conn *client.WebsocketConnection) {
+	conn.SendRequest(client.RequestType_PUT_SETTINGS, &client.Request{
+		Settings: &client.Settings{
+			SleepMode: &standbyState,
+		},
+	})
+}

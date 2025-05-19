@@ -36,7 +36,8 @@ type State struct {
 	IsNight          *bool
 	TemperatureMilli *int32
 	HumidityMilli    *int32
-	NightLight         *bool
+	NightLight       *bool
+	Standby          *bool
 }
 
 // NewState - constructor
@@ -233,4 +234,13 @@ func (s *State) SetNightLight(enabled bool) *State {
 
 func (s *State) GetNightLight() bool {
 	return s.NightLight != nil && *s.NightLight
+}
+
+func (s *State) SetStandby(enabled bool) *State {
+	s.Standby = &enabled
+	return s
+}
+
+func (s *State) GetStandby() bool {
+	return s.Standby != nil && *s.Standby
 }

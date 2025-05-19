@@ -12,13 +12,15 @@ import (
 )
 
 type SendLightCommandHandler func(nightLightState bool)
+type SendStandbyCommandHandler func(standbyState bool)
 
 // Connection - MQTT context
 type Connection struct {
-	Opts                    Opts
-	StateManager            *baby.StateManager
-	client                  MQTT.Client
-	sendLightCommandHandler SendLightCommandHandler
+	Opts                      Opts
+	StateManager              *baby.StateManager
+	client                    MQTT.Client
+	sendLightCommandHandler   SendLightCommandHandler
+	sendStandbyCommandHandler SendStandbyCommandHandler
 }
 
 // NewConnection - constructor
@@ -99,6 +101,51 @@ func (conn *Connection) subscribeToLightCommand() {
 	}
 }
 
+func (conn *Connection) RegisterStandyHandler(sendStandbyCommandHandler SendStandbyCommandHandler) {
+	conn.sendStandbyCommandHandler = sendStandbyCommandHandler
+}
+
+func (conn *Connection) subscribeToStandbyCommand() {
+	commandTopic := fmt.Sprintf("%v/babies/+/standby/switch", conn.Opts.TopicPrefix)
+	log.Debug().
+		Str("topic", commandTopic).
+		Msg("Subscribing to command topic")
+
+	standbyMessageHandler := func(mqttConn MQTT.Client, msg MQTT.Message) {
+		// Extract baby UID and command from topic
+		parts := strings.Split(msg.Topic(), "/")
+		if len(parts) < 4 {
+			log.Error().Str("topic", msg.Topic()).Msg("Invalid command topic format")
+			return
+		}
+
+		babyUID := parts[2]
+		command := parts[4]
+
+		// Validate baby UID
+		baby.EnsureValidBabyUID(babyUID)
+
+		// Handle different commands
+		switch command {
+		case "switch":
+			enabled := string(msg.Payload()) == "true"
+			log.Debug().
+				Str("baby", babyUID).
+				Bool("enabled", enabled).
+				Str("payload", string(msg.Payload())).
+				Msg("Received standby command")
+
+			conn.sendStandbyCommandHandler(enabled)
+		default:
+			log.Warn().Str("command", command).Msg("Unknown command received")
+		}
+	}
+
+	if token := conn.client.Subscribe(commandTopic, 0, standbyMessageHandler); token.Wait() && token.Error() != nil {
+		log.Error().Err(token.Error()).Str("topic", commandTopic).Msg("Failed to subscribe to command topic")
+	}
+}
+
 func runMqtt(conn *Connection, attempt utils.AttemptContext) {
 
 	if token := conn.client.Connect(); token.Wait() && token.Error() != nil {
@@ -131,6 +178,7 @@ func runMqtt(conn *Connection, attempt utils.AttemptContext) {
 
 	// Subscribe to accept light mqtt messages
 	conn.subscribeToLightCommand()
+	conn.subscribeToStandbyCommand()
 
 	// Wait until interrupt signal is received
 	<-attempt.Done()
