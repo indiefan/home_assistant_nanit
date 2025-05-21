@@ -131,6 +131,8 @@ func (app *App) runWebsocket(babyUID string, conn *client.WebsocketConnection, c
 				processSensorData(babyUID, m.Response.SensorData, app.BabyStateManager)
 			} else if *m.Response.RequestType == client.RequestType_GET_CONTROL && m.Response.Control != nil {
 				processLight(babyUID, m.Response.Control, app.BabyStateManager)
+			} else if *m.Response.RequestType == client.RequestType_GET_SETTINGS && m.Response.Settings != nil {
+				processStandby(babyUID, m.Response.Settings, app.BabyStateManager)
 			}
 		} else
 
@@ -141,12 +143,17 @@ func (app *App) runWebsocket(babyUID string, conn *client.WebsocketConnection, c
 				processSensorData(babyUID, m.Request.SensorData_, app.BabyStateManager)
 			} else if *m.Request.Type == client.RequestType_PUT_CONTROL && m.Request.Control != nil {
 				processLight(babyUID, m.Request.Control, app.BabyStateManager)
+			} else if *m.Request.Type == client.RequestType_PUT_SETTINGS && m.Request.Settings != nil {
+				processStandby(babyUID, m.Request.Settings, app.BabyStateManager)
 			}
 		}
 	})
 
 	app.MQTTConnection.RegisterLightHandler(func(enabled bool) {
 		sendLightCommand(enabled, conn)
+	})
+	app.MQTTConnection.RegisterStandyHandler(func(enabled bool) {
+		sendStandbyCommand(enabled, conn)
 	})
 
 	// Get the initial state of the light
